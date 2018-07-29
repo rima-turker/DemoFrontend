@@ -1,0 +1,59 @@
+plugins {
+  id 'com.devsoap.plugin.vaadin' version '1.2.0'
+  id 'eclipse-wtp'
+}
+
+apply plugin: 'java'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+   
+	compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.3'
+}
+
+vaadin {
+	logToConsole true
+}
+
+
+vaadinRun {
+    
+    /**
+     * Application server to use. Possible application servers are 'payara', 'jetty'.
+     */
+    server 'jetty'
+    
+    /**
+     * Should application be run in debug mode. When running in production set this to true.
+     */
+    debug false
+    
+    /**
+     * The port the debugger listens to.
+     */
+    debugPort 8000
+    
+    /**
+     * Should the server restart after every change.
+     */
+    serverRestart true
+    
+    /**
+     * The port the vaadin application should run on.
+     */
+    serverPort 8080
+    
+    /**
+     * Should theme be recompiled when SCSS file is changes.
+     */
+    themeAutoRecompile true
+    
+    /**
+     * Should the application be opened in a browser when it has been launched.
+     */
+    openInBrowser true
+    
+}
