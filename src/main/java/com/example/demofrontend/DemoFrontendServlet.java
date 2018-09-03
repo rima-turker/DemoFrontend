@@ -5,7 +5,7 @@ import javax.servlet.annotation.WebServlet;
 import com.vaadin.server.VaadinServlet;
 
 @WebServlet(
-    asyncSupported=false,
+    asyncSupported=true,
     urlPatterns={"/*","/VAADIN/*"},
     initParams={
         @WebInitParam(name="ui", value="com.example.demofrontend.DemoFrontendUI")
