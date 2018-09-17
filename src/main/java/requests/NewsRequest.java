@@ -12,62 +12,14 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 
 import model.FullTextNewsResult;
 import model.PartialTextNewsResult;
 
 public class NewsRequest {
-	/**
-	 * Due to encoding problem we depricated this function and switched to normal
-	 * Json library.
-	 * 
-	 * @param category
-	 * @return
-	 */
-	@Deprecated
-	public static FullTextNewsResult requestNewsWebhoseOld(String category) {
-		final FullTextNewsResult finalResult = new FullTextNewsResult();
-
-		WebhoseIOClient webhoseClient = WebhoseIOClient.getInstance("d7f1e16e-a94c-4d89-9536-7b303c0e7e0e");
-
-		Map<String, String> queries = new HashMap<String, String>();
-		queries.put("q", "site_category:" + category + " language:english site_type:news");
-
-		queries.put("sort", "crawled");
-
-		JsonElement result;
-		try {
-			result = webhoseClient.query("filterWebContent", queries);
-
-			JsonArray postArray = result.getAsJsonObject().getAsJsonArray("posts");
-
-			final int randomNumber = new Random().nextInt(postArray.size());
-
-			for (int i = 0; i < postArray.size(); i++) {
-				final JsonElement o = postArray.get(i);
-				if (i == randomNumber) {
-					finalResult.setFullText(o.getAsJsonObject().get("text").getAsString());
-					finalResult
-							.setTitle(o.getAsJsonObject().get("thread").getAsJsonObject().get("title").getAsString());
-					finalResult.setSource(
-							o.getAsJsonObject().get("thread").getAsJsonObject().get("site_full").getAsString());
-					finalResult.setLink(o.getAsJsonObject().get("thread").getAsJsonObject().get("url").getAsString());
-					return finalResult;
-				}
-			}
-			return null;
-		} catch (URISyntaxException | IOException e) {
-			// LOG.error(e.getMessage());
-			return null;
-		}
-
-	}
 
 	public static FullTextNewsResult requestNewsWebhose(String category) {
 		final FullTextNewsResult finalResult = new FullTextNewsResult();
@@ -79,10 +31,9 @@ public class NewsRequest {
 
 		queries.put("sort", "crawled");
 
-		JsonElement result;
+		JSONObject obj;
 		try {
-			result = webhoseClient.query("filterWebContent", queries);
-			final JSONObject obj = new JSONObject(result.toString());
+			obj = webhoseClient.query("filterWebContent", queries);
 			JSONArray postArray = obj.getJSONArray("posts");
 			final int randomNumber = new Random().nextInt(postArray.length());
 
@@ -103,41 +54,61 @@ public class NewsRequest {
 
 	}
 
-	public static PartialTextNewsResult requestNewsApi(String category) {
+	public static FullTextNewsResult requestNewsWebhose() {
+		final FullTextNewsResult finalResult = new FullTextNewsResult();
+
+		final WebhoseIOClient webhoseClient = WebhoseIOClient.getInstance("d7f1e16e-a94c-4d89-9536-7b303c0e7e0e");
+
+		final Map<String, String> queries = new HashMap<String, String>();
+		queries.put("q", "language:english site_type:news");
+
+		queries.put("sort", "crawled");
+
+		JSONObject obj;
+		try {
+			obj = webhoseClient.query("filterWebContent", queries);
+			final JSONArray postArray = obj.getJSONArray("posts");
+			final int randomNumber = new Random().nextInt(postArray.length());
+
+			for (int i = 0; i < postArray.length(); i++) {
+				final JSONObject o = (JSONObject) postArray.get(i);
+				if (i == randomNumber) {
+					finalResult.setFullText(o.getString("text"));
+					finalResult.setTitle(((JSONObject) o.get("thread")).getString("title"));
+					finalResult.setSource(((JSONObject) o.get("thread")).getString("site_full"));
+					finalResult.setLink(((JSONObject) o.get("thread")).getString("url"));
+					return finalResult;
+				}
+			}
+			return null;
+		} catch (URISyntaxException | IOException e) {
+			return null;
+		}
+
+	}
+
+	public static PartialTextNewsResult requestNewsApi() {
 		try {
 
 			final PartialTextNewsResult finalResult = new PartialTextNewsResult();
 
 			final HttpClient client = new DefaultHttpClient();
-			String url = "https://newsapi.org/v2/top-headlines?country=us&category=" + category
-					+ "&apiKey=fa3a923cfb1c4efcb920676e5d92e147";
+			final String url = "https://newsapi.org/v2/everything?q=the&apiKey=fa3a923cfb1c4efcb920676e5d92e147";
 			final HttpGet request = new HttpGet(url);
 			final HttpResponse response = client.execute(request);
-			final BufferedReader rd = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+			final JSONObject obj = new JSONObject(EntityUtils.toString(response.getEntity(), "UTF-8"));
 
-			final StringBuffer result = new StringBuffer();
-			String line = "";
-			while ((line = rd.readLine()) != null) {
-				result.append(line);
-			}
+			final JSONArray sourceArray = obj.getJSONArray("articles");
 
-			String json = result.toString();
+			final int randomNumber = new Random().nextInt(sourceArray.length());
 
-			JsonParser parser = new JsonParser();
-			com.google.gson.JsonObject o = parser.parse(json).getAsJsonObject();
-
-			final JsonArray sourceArray = o.getAsJsonObject().getAsJsonArray("articles");
-
-			final int randomNumber = new Random().nextInt(sourceArray.size());
-
-			for (int i = 0; i < sourceArray.size(); i++) {
-				final JsonElement oo = sourceArray.get(i);
+			for (int i = 0; i < sourceArray.length(); i++) {
+				final JSONObject oo = (JSONObject) sourceArray.get(i);
 				if (i == randomNumber) {
-					finalResult.setDescription(oo.getAsJsonObject().get("description").getAsString());
-					finalResult.setTitle(oo.getAsJsonObject().get("title").getAsString());
-					finalResult.setLink(oo.getAsJsonObject().get("url").getAsString());
-					finalResult
-							.setSource(oo.getAsJsonObject().get("source").getAsJsonObject().get("name").getAsString());
+					finalResult.setDescription(oo.getString("description"));
+					finalResult.setTitle(oo.getString("title"));
+					finalResult.setLink(oo.getString("url"));
+					finalResult.setSource(((JSONObject) oo.get("source")).getString("name"));
 					return finalResult;
 				}
 			}

@@ -9,7 +9,12 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 public class WikipeidaRequest {
-    public static String requestWikipeida(
+   
+	 public static void main(String[] args) {
+		 requestWikipeida("Einstein");
+	    }
+	
+	public static String requestWikipeida(
             String text)
     {
         try {

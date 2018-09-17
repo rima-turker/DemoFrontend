@@ -1,51 +1,39 @@
 package com.example.demofrontend;
 
-import java.io.File;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.json.JSONObject;
 
-import com.byteowls.vaadin.chartjs.config.ChartConfig;
-import com.byteowls.vaadin.chartjs.config.PieChartConfig;
-import com.byteowls.vaadin.chartjs.data.Dataset;
-import com.byteowls.vaadin.chartjs.data.PieDataset;
 import com.vaadin.annotations.Theme;
 import com.vaadin.server.ExternalResource;
-import com.vaadin.server.FileResource;
 import com.vaadin.server.Page;
 import com.vaadin.server.VaadinRequest;
-import com.vaadin.server.VaadinService;
 import com.vaadin.shared.ui.ContentMode;
+import com.vaadin.ui.Alignment;
 import com.vaadin.ui.Button;
-import com.vaadin.ui.ComboBox;
 import com.vaadin.ui.Component;
 import com.vaadin.ui.GridLayout;
 import com.vaadin.ui.HorizontalLayout;
-import com.vaadin.ui.Image;
 import com.vaadin.ui.Label;
 import com.vaadin.ui.Link;
 import com.vaadin.ui.Notification;
 import com.vaadin.ui.Panel;
+import com.vaadin.ui.RichTextArea;
 import com.vaadin.ui.TextArea;
 import com.vaadin.ui.TextField;
 import com.vaadin.ui.UI;
 import com.vaadin.ui.VerticalLayout;
 
-import model.Category;
 import model.FullTextNewsResult;
 import model.PartialTextNewsResult;
 import requests.NewsRequest;
 import requests.Request_KBTC_category;
 import requests.WikipeidaRequest;
-import util.ColorUtil;
 import util.SentenceSegmenter;
 
 @Theme("DemoFrontend")
@@ -57,13 +45,9 @@ public class DemoFrontendUI
     final TextArea textArea = createTextArea();
     String textAreaContent = "";
     final Label numberOfSentencesValue = new Label("0");
-    private TextArea listOfMentions;
+    private final RichTextArea highlightedResult = new RichTextArea();
     private VerticalLayout resultCategoryLayout;
 
-    // final ChartJs pieChart = new ChartJs();
-    // {
-    // pieChart.setJsLoggingEnabled(true);
-    // }
 
     /*
      * (non-Javadoc)
@@ -79,8 +63,9 @@ public class DemoFrontendUI
         mainLayout.setMargin(true);
         setContent(mainLayout);
 
-        final HorizontalLayout buttonLayout = new HorizontalLayout();
+        final GridLayout buttonLayout = new GridLayout(10,1);
         buttonLayout.setSpacing(true);
+        buttonLayout.setSizeFull();
         final Button annotateButton = createButton();
         final Button generateSampleText = createSampleTextButton();
         final Notification notif = new Notification(
@@ -88,9 +73,16 @@ public class DemoFrontendUI
                 "",
                 Notification.Type.HUMANIZED_MESSAGE);
         notif.setDelayMsec(3000);
-        buttonLayout.addComponent(annotateButton);
-        buttonLayout.addComponent(generateSampleText);
-        buttonLayout.addComponent(createNumberOfSentenceComponents());
+        
+        buttonLayout.addComponent(generateSampleText,0,0);
+        buttonLayout.setComponentAlignment(generateSampleText, Alignment.MIDDLE_LEFT);
+        
+        HorizontalLayout createNumberOfSentenceComponents = createNumberOfSentenceComponents();
+		buttonLayout.addComponent(createNumberOfSentenceComponents,1,0);
+        buttonLayout.setComponentAlignment(createNumberOfSentenceComponents, Alignment.MIDDLE_LEFT);
+        
+        buttonLayout.addComponent(annotateButton,9,0);
+        buttonLayout.setComponentAlignment(annotateButton, Alignment.MIDDLE_RIGHT);
 
         mainLayout.addComponent(
                 new Label(
@@ -115,10 +107,15 @@ public class DemoFrontendUI
                 return;
             } else {
                 bottomLayer.setVisible(true);
-                // pieChart.setVisible(true);
-                
-                listOfMentions.setValue(Request_KBTC_category.sendHttpGetMentions(textArea.getValue()).replaceAll(", ","\n"));
+
                 String[] mentions = Request_KBTC_category.sendHttpGetMentions(textArea.getValue()).split(",");
+                
+                String text = textArea.getValue();
+                for(String mention:mentions) {
+                	text = text.replace(mention.trim(), "<mark>"+mention.trim()+"</mark>");
+                }
+                
+                highlightedResult.setValue(text);
                 
                 final Map<String, Double> resultList = Request_KBTC_category.sendHttpGetCategoryList(textArea.getValue());
                 
@@ -133,27 +130,6 @@ public class DemoFrontendUI
                     catLayout.addComponent(categoryProbability);
                     resultCategoryLayout.addComponent(catLayout);
                 }
-//                String result = textArea.getValue();
-//                for(String mention:mentions) {
-//                	result = result.replace(mention.trim(), "<mark>"+mention.trim()+"</mark>");
-//                }
-//                textArea.setValue(result);
-                
-                
-              //  System.err.println(Request_KBTC_category.sendHttpGetCategoryList(textAreaContent));
-//                final Notification notifi = new Notification(
-//                        Request_KBTC_category.sendHttpGet(textAreaContent),
-//                        Notification.Type.HUMANIZED_MESSAGE);
-              
-//                
-//                Map<String, Double> map = new HashMap<>(Request_KBTC_category.sendHttpGetCategoryList(textAreaContent));
-//                for(Entry<String, Double> e : map.entrySet()) {
-//                	System.err.println(e.getKey()+" "+e.getValue());
-//                }
-                
-                
-//                notifi.show(Page.getCurrent());
-//                notifi.setDelayMsec(5000);
             }
 
         });
@@ -165,58 +141,16 @@ public class DemoFrontendUI
         panel.setSizeFull();
 
         final GridLayout bottomLayer = new GridLayout(10, 1);
-        listOfMentions = new TextArea("Mentions:");
-        listOfMentions.setRows(13);
-
-        final String basepath = VaadinService.getCurrent()
-                .getBaseDirectory().getAbsolutePath();
-        final FileResource resource = new FileResource(new File(basepath +
-                "/WEB-INF/images/KBTC_demo.png"));
-        final Image kbtc = new Image("KBTC:", resource);
-        kbtc.setSizeFull();
-        //kbtc.setWidth(100, Unit.PERCENTAGE);
-        //kbtc.setHeight(100, Unit.PERCENTAGE);
-
-        resultCategoryLayout = new VerticalLayout();
-
-//        final HorizontalLayout worldLayout = new HorizontalLayout();
-//        final Label worldCategoryName = new Label("World:");
-//        final Label worldCategoryProbability = new Label();
-//        worldLayout.addComponent(worldCategoryName);
-//        worldLayout.addComponent(worldCategoryProbability);
-//        categoryLayout.addComponent(worldLayout);
-//
-//        final HorizontalLayout businessLayout = new HorizontalLayout();
-//        final Label businessCategoryName = new Label("Business:");
-//        final Label businessCategoryProbability = new Label();
-//        businessLayout.addComponent(businessCategoryName);
-//        businessLayout.addComponent(businessCategoryProbability);
-//        categoryLayout.addComponent(businessLayout);
-//
-//        final HorizontalLayout sportsLayout = new HorizontalLayout();
-//        final Label sportsCategoryName = new Label("Sports:");
-//        final Label sportsCategoryProbability = new Label();
-//        sportsLayout.addComponent(sportsCategoryName);
-//        sportsLayout.addComponent(sportsCategoryProbability);
-//        categoryLayout.addComponent(sportsLayout);
-//
-//        final HorizontalLayout scienceLayout = new HorizontalLayout();
-//        final Label scienceCategoryName = new Label("Science:");
-//        final Label scienceCategoryProbability = new Label();
-//        scienceLayout.addComponent(scienceCategoryName);
-//        scienceLayout.addComponent(scienceCategoryProbability);
-//        categoryLayout.addComponent(scienceLayout);
         
-
-        // pieChart.configure(createPieChartConfiguration());
-        // pieChart.update();
-        // pieChart.setVisible(false);
-
-        bottomLayer.addComponent(listOfMentions,0,0);
-        bottomLayer.addComponent(kbtc,1,0,6,0);
-        bottomLayer.addComponent(resultCategoryLayout,7,0,9,0);
-        // bottomLayer.addComponent(pieChart);
-
+        highlightedResult.setEnabled(false);
+        highlightedResult.setReadOnly(true);
+        highlightedResult.setSizeFull();
+        highlightedResult.setHeight("250px");
+        
+        resultCategoryLayout = new VerticalLayout();
+        bottomLayer.addComponent(highlightedResult,0,0,7,0);
+        bottomLayer.addComponent(resultCategoryLayout,8,0,9,0);
+        
         bottomLayer.setSizeFull();
         bottomLayer.setSpacing(true);
         bottomLayer.setMargin(true);
@@ -225,53 +159,17 @@ public class DemoFrontendUI
         return panel;
     }
 
-    private ChartConfig createPieChartConfiguration() {
-        final PieChartConfig config = new PieChartConfig();
-        final Map<String, Double> statistic = getStatistic();
-        config.data().labels(statistic.keySet().stream().toArray(String[]::new))
-                .addDataset(new PieDataset().label("Dataset 1")).and();
-
-        config.options().responsive(true).title().display(true)
-                .text("Pie Chart").and().animation()
-                .animateScale(true).animateRotate(true).and().done();
-
-        for (final Dataset<?, ?> ds: config.data().getDatasets()) {
-            PieDataset lds = (PieDataset)ds;
-            List<Double> data = new ArrayList<>();
-            List<String> colors = new ArrayList<>();
-
-            for (Entry<String, Double> entry: statistic.entrySet()) {
-                data.add(entry.getValue());
-                colors.add(ColorUtil.colormap.get(entry.getKey()));
-            }
-
-            lds.backgroundColor(colors.toArray(new String[colors.size()]));
-            lds.dataAsList(data);
-        }
-        return config;
-    }
-
-    private Map<String, Double> getStatistic() {
-        final Map<String, Double> result = new HashMap<>();
-        result.put("Science", 0.30);
-        result.put("Sports", 0.25);
-        result.put("Business", 0.25);
-        result.put("World", 0.25);
-        return result;
-    }
-
     private Button createSampleTextButton() {
         final Button run = new Button("Sample Sentences");
         final List<String> sampleSentence = Arrays.asList(
-                "Albert Einstein was a German-born theoretical physicist who developed the theory of relativity, one of the two pillars of modern physics (alongside quantum mechanics)..",
+                "Albert Einstein was a German-born theoretical physicist who developed the theory of relativity, one of the two pillars of modern physics (alongside quantum mechanics).",
                 "FC Bayern München, FCB, Bayern Munich, or FC Bayern, is a German sports club based in Munich, Bavaria (Bayern).",
                 "Berlin is the capital and the largest city of Germany, as well as one of its 16 constituent states.",
-                "Dollar rises Vs Euro on asset flows data");
+                "Dollar rises Vs Euro on asset flows data.");
         run.addClickListener(event -> {
             int randomNum = ThreadLocalRandom.current().nextInt(0,
                     sampleSentence.size());
             textAreaContent = sampleSentence.get(randomNum);
-            textArea.clear();
             textArea.setValue(textAreaContent);
             numberOfSentencesValue.setValue(String.valueOf(
                     SentenceSegmenter.getNumberOfSentence(textAreaContent)));
@@ -281,6 +179,7 @@ public class DemoFrontendUI
 
     private Button createButton() {
         final Button run = new Button("Classify Text");
+        run.setStyleName("contrast primary");
         return run;
     }
 
@@ -288,8 +187,9 @@ public class DemoFrontendUI
         final TextArea textArea = new TextArea();
         textArea.setSizeFull();
         textArea.setRows(10);
-        //textArea.setReadOnly(true);
-//        textArea.addValueChangeListener(event -> textArea.re));
+        textArea.addValueChangeListener(event->{
+        	textAreaContent = event.getValue();
+        });
         return textArea;
     }
 
@@ -315,19 +215,6 @@ public class DemoFrontendUI
         newsLayout.setMargin(true);
         newsLayout.setSpacing(true);
 
-        final Label categoryLabel = new Label("Select News Category:");
-
-        final List<Category> categories = new ArrayList<>();
-        categories.add(new Category(1, "Sport", "sports"));
-        categories.add(new Category(2, "Business", "business"));
-        categories.add(new Category(3, "World", "general"));
-        categories.add(new Category(4, "Science", "science"));
-        final ComboBox<Category> categoryComboBox = new ComboBox<>();
-        categoryComboBox.setItems(categories);
-        categoryComboBox.setItemCaptionGenerator(Category::getName);
-        categoryComboBox.setValue(categories.get(0));
-        categoryComboBox.setEmptySelectionAllowed(false);
-        
         final Link url = new Link();
         url.setVisible(false);
 
@@ -341,12 +228,8 @@ public class DemoFrontendUI
 
         newsBtn.addClickListener(event -> {
             try {
-                final Optional<Category> selectedItem = categoryComboBox
-                        .getSelectedItem();
-                if (selectedItem != null && selectedItem.get() != null) {
                     final PartialTextNewsResult result = NewsRequest
-                            .requestNewsApi(
-                                    selectedItem.get().getNameInTheNewsSite());
+                            .requestNewsApi();
                     if (result != null) {
                         textAreaContent = result.getTitle() + "\n"
                                 + result.getDescription();
@@ -370,16 +253,9 @@ public class DemoFrontendUI
                         notifi.show(Page.getCurrent());
                         notifi.setDelayMsec(5000);
                     }
-                } else {
-                    final Notification notifi = new Notification(
-                            "Select the category first.",
-                            Notification.Type.ERROR_MESSAGE);
-                    notifi.show(Page.getCurrent());
-                    notifi.setDelayMsec(5000);
-                }
             } catch (Exception e) {
-                final Notification notifi = new Notification(
-                        "Select the category first.",
+            	final Notification notifi = new Notification(
+                        "Can not fecth any news.",
                         Notification.Type.ERROR_MESSAGE);
                 notifi.show(Page.getCurrent());
                 notifi.setDelayMsec(5000);
@@ -387,8 +263,6 @@ public class DemoFrontendUI
 
         });
 
-        newsLayout.addComponent(categoryLabel);
-        newsLayout.addComponent(categoryComboBox);
         newsLayout.addComponent(newsBtn);
         newsLayout.addComponent(sourceOfNewsLabel);
         newsLayout.addComponent(sourceOfNews);
@@ -415,38 +289,15 @@ public class DemoFrontendUI
         final Label sourceOfNews = new Label();
         sourceOfNews.setVisible(false);
 
-        final Label categoryLabel = new Label("Select News Category:");
-
-        final List<Category> categories = new ArrayList<>();
-        categories.add(new Category(1, "Sport", "sports"));
-        categories.add(new Category(2, "Business", "business"));
-        categories.add(new Category(3, "World", "travel"));
-        categories.add(new Category(4, "Science", "tech"));
-        final ComboBox<Category> categoryComboBox = new ComboBox<>();
-        categoryComboBox.setItems(categories);
-        categoryComboBox.setItemCaptionGenerator(Category::getName);
-        categoryComboBox.setValue(categories.get(0));
-        categoryComboBox.setEmptySelectionAllowed(false);
-
         final Button newsBtn = new Button("Get a random news");
 
         newsBtn.addClickListener(event -> {
             try {
-                final Optional<Category> selectedItem = categoryComboBox
-                        .getSelectedItem();
-                if (selectedItem != null && selectedItem.get() != null) {
                     final FullTextNewsResult result = NewsRequest
-                            .requestNewsWebhose(
-                                    selectedItem.get().getNameInTheNewsSite());
+                            .requestNewsWebhose();
                     if (result != null) {
-                    	//TODO: Rima
-                    	String originalResponseString = new String(result.getFullText().getBytes(), "UTF-8");
-                        
-                    	
                     	textAreaContent = result.getFullText();
-                        
-                        textArea.setValue(originalResponseString);
-//                        textArea.setValue(textAreaContent);
+                        textArea.setValue(textAreaContent);
                         url.setCaption(
                                 "Want to see the news page? Click here...");
                         url.setResource(new ExternalResource(result.getLink()));
@@ -465,16 +316,9 @@ public class DemoFrontendUI
                         notifi.show(Page.getCurrent());
                         notifi.setDelayMsec(5000);
                     }
-                } else {
-                    final Notification notifi = new Notification(
-                            "Select the category first.",
-                            Notification.Type.ERROR_MESSAGE);
-                    notifi.show(Page.getCurrent());
-                    notifi.setDelayMsec(5000);
-                }
             } catch (Exception exception) {
-                final Notification notifi = new Notification(
-                        "Select the category first.",
+            	final Notification notifi = new Notification(
+                        "Can not fecth any news.",
                         Notification.Type.ERROR_MESSAGE);
                 notifi.show(Page.getCurrent());
                 notifi.setDelayMsec(5000);
@@ -482,8 +326,6 @@ public class DemoFrontendUI
 
         });
 
-        newsLayout.addComponent(categoryLabel);
-        newsLayout.addComponent(categoryComboBox);
         newsLayout.addComponent(newsBtn);
         newsLayout.addComponent(sourceOfNewsLabel);
         newsLayout.addComponent(sourceOfNews);
@@ -563,11 +405,6 @@ public class DemoFrontendUI
     private HorizontalLayout createNumberOfSentenceComponents() {
         final HorizontalLayout numberOfSentenceLayout = new HorizontalLayout();
 
-        // Create a vertical slider
-        // final Slider numberOfSentencesSlider = new Slider("Number of
-        // Sentences",
-        // 1, 100);
-        // numberOfSentencesSlider.setOrientation(SliderOrientation.HORIZONTAL);
         final Label numberOfSentencesLabel = new Label("Number Of Sentence:");
 
         final Button numberOfSentenceMinuesBtn = new Button("-");
@@ -599,26 +436,10 @@ public class DemoFrontendUI
             }
         });
 
-        // Handle changes in slider value.
-        // numberOfSentencesSlider.addValueChangeListener(event -> {
-        // int value = event.getValue().intValue();
-        // numberOfSentencesLabel.setValue(String.valueOf(value));
-        // });
-
-        // final Button numberOfSentenceBtn = new Button("Apply");
-        // numberOfSentenceBtn.addClickListener(event -> {
-        // final String sentences = SentenceSegmenter.getSentences(
-        // Integer.parseInt(numberOfSentencesValue.getValue()),
-        // textAreaContent);
-        // textArea.setValue(sentences);
-        // });
-
-        // numberOfSentenceLayout.addComponent(numberOfSentencesSlider);
         numberOfSentenceLayout.addComponent(numberOfSentenceMinuesBtn);
         numberOfSentenceLayout.addComponent(numberOfSentencesLabel);
         numberOfSentenceLayout.addComponent(numberOfSentencesValue);
         numberOfSentenceLayout.addComponent(numberOfSentencePlusBtn);
-        // numberOfSentenceLayout.addComponent(numberOfSentenceBtn);
         return numberOfSentenceLayout;
     }
 
@@ -632,7 +453,7 @@ public class DemoFrontendUI
             final String pageId = jsonObject2.keys().next();
             final JSONObject jsonObject3 = jsonObject2.getJSONObject(pageId);
 
-            return jsonObject3.getString("extract");
+            return jsonObject3.getString("title")+"\n"+jsonObject3.getString("extract");
         } catch (Exception excpetion) {
             return null;
         }
