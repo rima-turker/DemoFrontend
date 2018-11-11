@@ -187,9 +187,9 @@ public class DemoFrontendUI
         final TextArea textArea = new TextArea();
         textArea.setSizeFull();
         textArea.setRows(10);
-        textArea.addValueChangeListener(event->{
-        	textAreaContent = event.getValue();
-        });
+//        textArea.addValueChangeListener(event->{
+//        	textAreaContent = event.getValue();
+//        });
         return textArea;
     }
 
@@ -424,6 +424,7 @@ public class DemoFrontendUI
 
         numberOfSentencePlusBtn.addClickListener(event -> {
             int value = Integer.parseInt(numberOfSentencesValue.getValue());
+            
             if (value <= SentenceSegmenter
                     .getNumberOfSentence(textAreaContent))
             {

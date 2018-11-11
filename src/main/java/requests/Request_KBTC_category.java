@@ -22,8 +22,8 @@ import util.URLUTF8Encoder;
 @SuppressWarnings("deprecation")
 public class Request_KBTC_category {
 
-	private static final String BASE_URL = "http://10.10.4.10:4567/";
-//	private static final String BASE_URL = "http://127.0.0.1:4567/";
+	//private static final String BASE_URL = "http://10.10.4.10:4567/";
+	private static final String BASE_URL = "http://127.0.0.1:4567/";
 
 	public static String sendHttpGetMentions(String text)  {
 		try {
